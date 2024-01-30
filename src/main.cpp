@@ -12,7 +12,7 @@
 #include <viam/api/robot/v1/robot.pb.h>
 
 #include <viam/sdk/components/component.hpp>
-#include <viam/sdk/components/generic/generic.hpp>
+#include <viam/sdk/components/camera/camera.hpp>
 #include <viam/sdk/config/resource.hpp>
 #include <viam/sdk/module/module.hpp>
 #include <viam/sdk/module/service.hpp>
@@ -21,77 +21,140 @@
 #include <viam/sdk/rpc/dial.hpp>
 #include <viam/sdk/rpc/server.hpp>
 
+std::vector<std::vector<int>> bytes_to_depth_array(const std::vector<uint8_t>& data) {
+    if (data.size() < 24) {
+        throw std::runtime_error("Data too short to contain valid depth information");
+    }
+
+    // Assuming data is in big-endian format
+    uint64_t width = 0;
+    uint64_t height = 0;
+
+    // Extract width and height from the byte array
+    for (int i = 0; i < 8; ++i) {
+        width = (width << 8) | data[8 + i];
+        height = (height << 8) | data[16 + i];
+    }
+
+    if (data.size() < 24 + width * height * sizeof(uint16_t)) {
+        throw std::runtime_error("Data size does not match width and height");
+    }
+
+    std::vector<std::vector<int>> depth_arr_2d(height, std::vector<int>(width));
+
+    // Convert the remaining bytes to a 2D depth array
+    for (uint64_t row = 0; row < height; ++row) {
+        for (uint64_t col = 0; col < width; ++col) {
+            size_t data_idx = 24 + (row * width + col) * sizeof(uint16_t);
+            uint16_t depth_val = static_cast<uint16_t>(data[data_idx] << 8 | data[data_idx + 1]);
+            depth_arr_2d[row][col] = depth_val;
+        }
+    }
+
+    return depth_arr_2d;
+}
+
 using namespace viam::sdk;
 
-// Printer is a modular resource that can print a to_print value to STDOUT when
-// a DoCommand request is received or when reconfiguring. The to_print value
-// must be provided as an attribute in the config.
-class Printer : public Generic {
+class AlignmentChecker : public Camera {
    public:
-    void reconfigure(Dependencies deps, ResourceConfig cfg) {
-        std::cout << "Printer " << Resource::name() << " is reconfiguring" << std::endl;
-        for (auto& dep : deps) {
-            std::cout << "dependency: " << dep.first.to_string() << std::endl;
+    void reconfigure(Dependencies deps, ResourceConfig cfg) override {
+        std::cout << "AlignmentChecker " << Resource::name() << " is reconfiguring\n";
+        if (deps.size() <= 0) {
+            std::ostringstream buffer;
+            buffer << "no dependencies were specified in config attributes\n";
+            throw std::invalid_argument(buffer.str());
+        } else if (deps.size() > 1) {
+            std::ostringstream buffer;
+            buffer << "please specify only one dependency\n";
+            throw std::invalid_argument(buffer.str());
         }
-        to_print_ = find_to_print(cfg);
-        std::cout << "Printer " << Resource::name() << " will now print " << to_print_ << std::endl;
+        for (auto& dep : deps) {
+            std::shared_ptr<Resource> cam_resource = dep.second;
+            if (cam_resource->api().to_string() != API::get<Camera>().to_string()) {
+                std::ostringstream buffer;
+                buffer << "dependency " << cam_resource->api().to_string() << " is not a camera resource\n";
+                throw std::invalid_argument(buffer.str());
+            }
+            cam = std::dynamic_pointer_cast<Camera>(cam_resource);
+        }
     }
 
-    Printer(Dependencies deps, ResourceConfig cfg) : Generic(cfg.name()) {
-        std::cout << "Creating Printer " + Resource::name() << std::endl;
-        to_print_ = find_to_print(cfg);
-        std::cout << "Printer " << Resource::name() << " will print " << to_print_ << std::endl;
+    AlignmentChecker(Dependencies deps, ResourceConfig cfg) : Camera(cfg.name()) {
+        std::cout << "Creating AlignmentChecker " + Resource::name() << std::endl;
+        reconfigure(deps, cfg);
     }
 
-    AttributeMap do_command(AttributeMap command) {
-        std::cout << "Received DoCommand request for Printer " << Resource::name() << std::endl;
-        std::cout << "Printer " << Resource::name() << " has printed " << to_print_ << std::endl;
-        return command;
+    AttributeMap do_command(AttributeMap command) override {
+        std::ostringstream buffer;
+        buffer << "do_command method is unsupported\n";
+        throw std::runtime_error(buffer.str());
     }
 
-    std::vector<GeometryConfig> get_geometries(const AttributeMap& extra) {
+    std::vector<GeometryConfig> get_geometries(const AttributeMap& extra) override {
         return std::vector<GeometryConfig>();
     }
 
-    static std::string find_to_print(ResourceConfig cfg) {
-        auto& printer_name = cfg.name();
-        auto to_print = cfg.attributes()->find("to_print");
-        if (to_print == cfg.attributes()->end()) {
-            std::ostringstream buffer;
-            buffer << printer_name << ": Required parameter `to_print` not found in configuration";
-            throw std::invalid_argument(buffer.str());
+    raw_image get_image(std::string mime_type, const AttributeMap& extra) override {
+        auto image_coll = cam->get_images();
+        auto duration_since_epoch = image_coll.metadata.captured_at.time_since_epoch();
+        auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration_since_epoch).count();
+        std::cout << "captured at: " << nanoseconds << std::endl;
+
+        std::vector<raw_image> images = image_coll.images;
+        raw_image return_img;
+        for (raw_image img : images) {
+            std::string depth_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_RAW_DEPTH);
+            std::string jpeg_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_JPEG);
+            if (img.mime_type == depth_format_str) {
+                std::cout << img.mime_type << " depth\n";
+            } else if (img.mime_type == jpeg_format_str) {
+                return_img = img;
+                std::cout << img.mime_type << " jpeg\n";
+            } else {
+                std::ostringstream buffer;
+                buffer << "unsupported image mimetype received from get_images call to camera: " << img.mime_type;
+                throw std::runtime_error(buffer.str());
+            }
         }
-        const auto* const to_print_string = to_print->second->get<std::string>();
-        if (!to_print_string || to_print_string->empty()) {
-            std::ostringstream buffer;
-            buffer << printer_name
-                   << ": Required non-empty string parameter `to_print` is either not a string "
-                      "or is an empty string";
-            throw std::invalid_argument(buffer.str());
-        }
-        return *to_print_string;
+        return return_img;
+    }
+
+    image_collection get_images() override {
+        std::ostringstream buffer;
+        buffer << "get_images method is unsupported\n";
+        throw std::runtime_error(buffer.str());
+    }
+
+    point_cloud get_point_cloud(std::string mime_type, const AttributeMap& extra) override {
+        std::ostringstream buffer;
+        buffer << "get_point_cloud method is unsupported\n";
+        throw std::runtime_error(buffer.str());
+    }
+
+    properties get_properties() override {
+        std::ostringstream buffer;
+        buffer << "get_properties unsupported is unsupported\n";
+        throw std::runtime_error(buffer.str());
     }
 
    private:
-    std::string to_print_;
+    std::shared_ptr<Camera> cam;
 };
 
 int main(int argc, char** argv) {
-    API generic = API::get<Generic>();
-    Model m("viam", "generic", "printer");
+    API camera_api = API::get<Camera>();
+    Model m("viam", "camera", "alignment-checker");
 
     std::shared_ptr<ModelRegistration> mr = std::make_shared<ModelRegistration>(
-        generic,
+        camera_api,
         m,
-        [](Dependencies deps, ResourceConfig cfg) { return std::make_unique<Printer>(deps, cfg); },
+        [](Dependencies deps, ResourceConfig cfg) { return std::make_unique<AlignmentChecker>(deps, cfg); },
         // Custom validation can be done by specifying a validate function like
         // this one. Validate functions can `throw` exceptions that will be
         // returned to the parent through gRPC. Validate functions can also return
         // a vector of strings representing the implicit dependencies of the resource.
         [](ResourceConfig cfg) -> std::vector<std::string> {
-            // find_to_print will throw an error if the `to_print` attribute
-            // is missing, is not a string or is an empty string.
-            Printer::find_to_print(cfg);
             return {};
         });
 

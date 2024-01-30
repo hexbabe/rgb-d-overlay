@@ -1,8 +1,8 @@
 {
-  "module_id": "viam:module-example-cpp",
+  "module_id": "viam:alignment-checker",
   "visibility": "public",
-  "url": "https://github.com/viamrobotics/module-example-cpp",
-  "description": "Wifi stats example module using the Viam C++ SDK",
+  "url": "https://github.com/hexbabe/alignment-checker",
+  "description": "C++ module for checking alignment of a Viam camera module's depth and color images",
   "models": [
     {
       "api": "rdk:component:sensor",
