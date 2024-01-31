@@ -9,5 +9,5 @@
       "model": "viam:camera:rgb-d-overlay"
     }
   ],
-  "entrypoint": "run.sh"
+  "entrypoint": "rgb-d-overlay"
 }
