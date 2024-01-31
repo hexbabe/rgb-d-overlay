@@ -16,6 +16,9 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(viam-cpp-sdk)
 
+find_package(ImageMagick COMPONENTS Magick++)
+include_directories(${ImageMagick_INCLUDE_DIRS})
+
 FILE(GLOB sources src/*.cpp)
 add_executable(alignment-checker ${sources})
-target_link_libraries(alignment-checker PRIVATE viam-cpp-sdk::viamsdk)
+target_link_libraries(alignment-checker PRIVATE viam-cpp-sdk::viamsdk ${ImageMagick_LIBRARIES})

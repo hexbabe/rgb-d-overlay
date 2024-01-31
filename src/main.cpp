@@ -1,3 +1,6 @@
+#define MAGICKCORE_QUANTUM_DEPTH 16
+#define MAGICKCORE_HDRI_ENABLE 0
+
 #include <iostream>
 #include <memory>
 #include <signal.h>
@@ -21,7 +24,9 @@
 #include <viam/sdk/rpc/dial.hpp>
 #include <viam/sdk/rpc/server.hpp>
 
-std::vector<std::vector<int>> bytes_to_depth_array(const std::vector<uint8_t>& data) {
+#include <Magick++.h>
+
+std::tuple<uint64_t, uint64_t, std::vector<uint16_t>> deserialize_depth_map(const std::vector<unsigned char>& data) {
     if (data.size() < 24) {
         throw std::runtime_error("Data too short to contain valid depth information");
     }
@@ -30,7 +35,7 @@ std::vector<std::vector<int>> bytes_to_depth_array(const std::vector<uint8_t>& d
     uint64_t width = 0;
     uint64_t height = 0;
 
-    // Extract width and height from the byte array
+    // Extract width and height from the byte array header
     for (int i = 0; i < 8; ++i) {
         width = (width << 8) | data[8 + i];
         height = (height << 8) | data[16 + i];
@@ -40,18 +45,17 @@ std::vector<std::vector<int>> bytes_to_depth_array(const std::vector<uint8_t>& d
         throw std::runtime_error("Data size does not match width and height");
     }
 
-    std::vector<std::vector<int>> depth_arr_2d(height, std::vector<int>(width));
+    std::vector<uint16_t> arr;
+    arr.reserve(width * height);
 
-    // Convert the remaining bytes to a 2D depth array
-    for (uint64_t row = 0; row < height; ++row) {
-        for (uint64_t col = 0; col < width; ++col) {
-            size_t data_idx = 24 + (row * width + col) * sizeof(uint16_t);
-            uint16_t depth_val = static_cast<uint16_t>(data[data_idx] << 8 | data[data_idx + 1]);
-            depth_arr_2d[row][col] = depth_val;
-        }
+    // Remaining bytes are all depth map data
+    for (size_t i = 0; i < width * height; ++i) {
+        size_t data_index = 24 + i * sizeof(uint16_t);
+        uint16_t depth_value = static_cast<uint16_t>(data[data_index] << 8 | data[data_index + 1]);
+        arr.push_back(depth_value);
     }
 
-    return depth_arr_2d;
+    return std::make_tuple(width, height, arr);
 }
 
 using namespace viam::sdk;
@@ -96,28 +100,52 @@ class AlignmentChecker : public Camera {
     }
 
     raw_image get_image(std::string mime_type, const AttributeMap& extra) override {
+        // Get image data from get_images call
         auto image_coll = cam->get_images();
-        auto duration_since_epoch = image_coll.metadata.captured_at.time_since_epoch();
-        auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(duration_since_epoch).count();
-        std::cout << "captured at: " << nanoseconds << std::endl;
-
         std::vector<raw_image> images = image_coll.images;
-        raw_image return_img;
-        for (raw_image img : images) {
-            std::string depth_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_RAW_DEPTH);
-            std::string jpeg_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_JPEG);
-            if (img.mime_type == depth_format_str) {
-                std::cout << img.mime_type << " depth\n";
-            } else if (img.mime_type == jpeg_format_str) {
-                return_img = img;
-                std::cout << img.mime_type << " jpeg\n";
+        std::string depth_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_RAW_DEPTH);
+        std::string jpeg_format_str = Camera::format_to_MIME_string(viam::component::camera::v1::FORMAT_JPEG);
+        uint64_t width;
+        uint64_t height;
+        std::vector<uint16_t> depth_arr;
+        std::vector<unsigned char> color_arr;
+        for (raw_image image : images) {
+            if (image.mime_type == depth_format_str) {
+                std::tie(width, height, depth_arr) = deserialize_depth_map(image.bytes);
+            } else if (image.mime_type == jpeg_format_str) {
+                color_arr = image.bytes;
             } else {
                 std::ostringstream buffer;
-                buffer << "unsupported image mimetype received from get_images call to camera: " << img.mime_type;
+                buffer << "unsupported mimetype received from get_images: " << image.mime_type << std::endl;
                 throw std::runtime_error(buffer.str());
             }
         }
-        return return_img;
+
+        Magick::Image depth_image;
+        depth_image.read(width, height, "I", Magick::ShortPixel, depth_arr.data());
+
+        Magick::Blob color_blob(&color_arr[0], color_arr.size());
+        Magick::Image color_image;
+        color_image.read(color_blob);
+
+        color_image.evaluate(Magick::AlphaChannel, Magick::MultiplyEvaluateOperator, 0.5);
+        depth_image.evaluate(Magick::AlphaChannel, Magick::MultiplyEvaluateOperator, 0.5);
+
+        // Soft light composite looks best visually
+        color_image.composite(depth_image, 0, 0, Magick::SoftLightCompositeOp);
+
+        Magick::Blob jpegBlob;
+        color_image.magick("JPEG");
+        color_image.write(&jpegBlob);
+
+        const void* blobData = jpegBlob.data();
+        std::vector<unsigned char> jpeg_bytes(static_cast<const unsigned char*>(blobData), static_cast<const unsigned char*>(blobData) + jpegBlob.length());
+
+        raw_image overlayed_raw_image;
+        overlayed_raw_image.mime_type = jpeg_format_str;
+        overlayed_raw_image.bytes = jpeg_bytes;
+        overlayed_raw_image.source_name = cam->name();
+        return overlayed_raw_image;
     }
 
     image_collection get_images() override {
@@ -143,6 +171,8 @@ class AlignmentChecker : public Camera {
 };
 
 int main(int argc, char** argv) {
+    Magick::InitializeMagick(nullptr);
+
     API camera_api = API::get<Camera>();
     Model m("viam", "camera", "alignment-checker");
 
