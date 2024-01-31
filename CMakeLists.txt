@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7 FATAL_ERROR)
 
-project(alignment-checker LANGUAGES CXX)
+project(rgb-d-overlay LANGUAGES CXX)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -20,5 +20,5 @@ find_package(ImageMagick COMPONENTS Magick++)
 include_directories(${ImageMagick_INCLUDE_DIRS})
 
 FILE(GLOB sources src/*.cpp)
-add_executable(alignment-checker ${sources})
-target_link_libraries(alignment-checker PRIVATE viam-cpp-sdk::viamsdk ${ImageMagick_LIBRARIES})
+add_executable(rgb-d-overlay ${sources})
+target_link_libraries(rgb-d-overlay PRIVATE viam-cpp-sdk::viamsdk ${ImageMagick_LIBRARIES})

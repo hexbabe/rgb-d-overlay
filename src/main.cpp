@@ -60,10 +60,10 @@ std::tuple<uint64_t, uint64_t, std::vector<uint16_t>> deserialize_depth_map(cons
 
 using namespace viam::sdk;
 
-class AlignmentChecker : public Camera {
+class RGBDOverlay : public Camera {
    public:
     void reconfigure(Dependencies deps, ResourceConfig cfg) override {
-        std::cout << "AlignmentChecker " << Resource::name() << " is reconfiguring\n";
+        std::cout << "rgb-d-overlay " << Resource::name() << " is reconfiguring\n";
         if (deps.size() <= 0) {
             std::ostringstream buffer;
             buffer << "no dependencies were specified in config attributes\n";
@@ -84,8 +84,8 @@ class AlignmentChecker : public Camera {
         }
     }
 
-    AlignmentChecker(Dependencies deps, ResourceConfig cfg) : Camera(cfg.name()) {
-        std::cout << "Creating AlignmentChecker " + Resource::name() << std::endl;
+    RGBDOverlay(Dependencies deps, ResourceConfig cfg) : Camera(cfg.name()) {
+        std::cout << "Creating rgb-d-overlay " + Resource::name() << std::endl;
         reconfigure(deps, cfg);
     }
 
@@ -174,12 +174,12 @@ int main(int argc, char** argv) {
     Magick::InitializeMagick(nullptr);
 
     API camera_api = API::get<Camera>();
-    Model m("viam", "camera", "alignment-checker");
+    Model m("viam", "camera", "rgb-d-overlay");
 
     std::shared_ptr<ModelRegistration> mr = std::make_shared<ModelRegistration>(
         camera_api,
         m,
-        [](Dependencies deps, ResourceConfig cfg) { return std::make_unique<AlignmentChecker>(deps, cfg); },
+        [](Dependencies deps, ResourceConfig cfg) { return std::make_unique<RGBDOverlay>(deps, cfg); },
         // Custom validation can be done by specifying a validate function like
         // this one. Validate functions can `throw` exceptions that will be
         // returned to the parent through gRPC. Validate functions can also return
