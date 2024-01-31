@@ -1,6 +1,6 @@
 # RGB Depth Overlay C++ Module
 
-This module, developed using the [C++ SDK](https://github.com/viamrobotics/viam-cpp-sdk). The RGB-D overlay module is designed to process color and depth outputs from a camera module, calling `get_images`. It uses ImageMagick to overlay the two images semi-transparently to directly compare the outputs and check if they are aligned.
+The RGB-D overlay module is designed to process color and depth outputs from a camera module, calling `get_images`. It uses ImageMagick to overlay the two images semi-transparently to directly compare the outputs and check if they are aligned.
 
 ### Setup
 
@@ -8,6 +8,11 @@ This module, developed using the [C++ SDK](https://github.com/viamrobotics/viam-
 1. Install Rust from [here](https://www.rust-lang.org/tools/install) for `viam_rust_utils`.
 
 ## Building and Running the Module
+1. Clone this repository
+```
+git clone https://github.com/viam-labs/rgb-d-overlay.git
+cd rgb-d-overlay
+```
 1. Run
 ```
 mkdir build
