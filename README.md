@@ -2,17 +2,18 @@
 
 The RGB-D overlay module is designed to process color and depth outputs from a camera module, calling `get_images`. It uses ImageMagick to overlay the two images semi-transparently to directly compare the outputs and check if they are aligned.
 
-### Setup
+### Development on MacOS
 
 1. Install necessary packages from [setup.sh](setup.sh).
 1. Install Rust from [here](https://www.rust-lang.org/tools/install) for `viam_rust_utils`.
 
 ## Building and Running the Module
-1. Clone this repository
+First, clone this repository.
 ```
 git clone https://github.com/viam-labs/rgb-d-overlay.git
 cd rgb-d-overlay
 ```
+### MacOS
 1. Run
 ```
 mkdir build
@@ -20,7 +21,16 @@ cd build
 cmake ..
 make
 ```
-1. The outputted binary `rgb-d-overlay` should be in the `build` directory.
+2. The outputted binary `rgb-d-overlay` will be in the `build` directory.
+
+### Linux ARM64
+1. Clone this repository
+```
+git clone https://github.com/viam-labs/rgb-d-overlay.git
+cd rgb-d-overlay
+```
+2. Make sure you have [Docker installed.](https://docs.docker.com/engine/install/)
+3. Run `make appimage-aarch64`
 
 ### Local Build
 

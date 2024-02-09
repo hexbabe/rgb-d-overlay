@@ -9,4 +9,5 @@ brew install \
     pkg-config \
     ninja \
     git \
-    wget
+    wget \
+    imagemagick

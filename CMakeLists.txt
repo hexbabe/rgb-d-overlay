@@ -5,6 +5,8 @@ project(rgb-d-overlay LANGUAGES CXX)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 include(FetchContent)
+
+if(APPLE)
 FetchContent_Declare(
   viam-cpp-sdk
   GIT_REPOSITORY https://github.com/viamrobotics/viam-cpp-sdk.git
@@ -15,10 +17,15 @@ FetchContent_Declare(
   FIND_PACKAGE_ARGS
 )
 FetchContent_MakeAvailable(viam-cpp-sdk)
+endif()
 
 find_package(ImageMagick COMPONENTS Magick++)
+find_package(viam-cpp-sdk CONFIG REQUIRED)
 include_directories(${ImageMagick_INCLUDE_DIRS})
 
 FILE(GLOB sources src/*.cpp)
 add_executable(rgb-d-overlay ${sources})
 target_link_libraries(rgb-d-overlay PRIVATE viam-cpp-sdk::viamsdk ${ImageMagick_LIBRARIES})
+
+# Install the rgb-d-overlay executable to the bin directory under the installation prefix
+install(TARGETS rgb-d-overlay DESTINATION bin)

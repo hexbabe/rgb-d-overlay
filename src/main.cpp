@@ -128,9 +128,6 @@ class RGBDOverlay : public Camera {
         Magick::Image color_image;
         color_image.read(color_blob);
 
-        color_image.evaluate(Magick::AlphaChannel, Magick::MultiplyEvaluateOperator, 0.5);
-        depth_image.evaluate(Magick::AlphaChannel, Magick::MultiplyEvaluateOperator, 0.5);
-
         // Soft light composite looks best visually
         color_image.composite(depth_image, 0, 0, Magick::SoftLightCompositeOp);
 
