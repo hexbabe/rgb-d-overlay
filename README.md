@@ -104,7 +104,7 @@ The outputted binary `rgb-d-overlay` will be written to the `build` directory.
 ### Build on Linux
 
 1. [Install Docker](https://docs.docker.com/engine/install/).
-1. Clone this repository.
+1. Clone this repository:
 
    ```bash
    git clone https://github.com/viam-labs/rgb-d-overlay.git
