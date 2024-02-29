@@ -2,7 +2,7 @@
 
 This module implements the [Viam camera API](https://docs.viam.com/build/program/apis/#camera) in a `rgb-d-overlay` model.
 With this model, you can process color and depth outputs from multiple camera modules, in order to ensure that the FOV, resolution, aspect ratio, and time synchronization of the cameras are aligned.
-This model uses ImageMagick to overlay two images semi-transparently to directly compare two camera outputs.
+This module uses ImageMagick to overlay two images semi-transparently to directly compare two camera outputs.
 
 ## Requirements
 
@@ -33,7 +33,7 @@ On the camera component that supports outputting simultaneous depth and color im
 
 Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
 Click on the **Components** subtab and select the configuration pane for your image stream camera, _not_ the `rgb-d-overlay` camera.
-Under **Attributes**, add the following `sensor` configuration to your image stream camera configuration:
+Under **Attributes**, add the following `sensors` configuration to your image stream camera configuration:
 
 ```json
 {
