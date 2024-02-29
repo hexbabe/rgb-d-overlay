@@ -1,46 +1,53 @@
-# RGB Depth Overlay C++ Module
+# RGB Depth Overlay modular component
 
-The RGB-D overlay module is designed to process color and depth outputs from a camera module, calling `get_images`. It uses ImageMagick to overlay the two images semi-transparently to directly compare the outputs and check if they are aligned.
+This module implements the [Viam camera API](https://docs.viam.com/build/program/apis/#camera) in a `rgb-d-overlay` model.
+With this model, you can process color and depth outputs from multiple camera modules, in order to ensure that the FOV, resolution, aspect ratio, and time synchronization of the cameras are aligned.
+This module uses ImageMagick to overlay two images semi-transparently to directly compare two camera outputs.
 
-### Development on MacOS
+## Requirements
 
-1. Install necessary packages from [setup.sh](setup.sh).
-1. Install Rust from [here](https://www.rust-lang.org/tools/install) for `viam_rust_utils`.
+Your machine must have at least one [camera component](https://docs.viam.com/components/camera/) which supports outputting simultaneous depth and color image streams, such as the [Intel Realsense](https://app.viam.com/module/viam/realsense) or the [Luxonis OAK-D](https://app.viam.com/module/viam/oak-d), in order to use the `rgb-d-overlay` module.
 
-## Building and Running the Module
-First, clone this repository.
+## Build and run
+
+To use this module, follow the instructions to [add a module from the Viam Registry](https://docs.viam.com/registry/configure/#add-a-modular-resource-from-the-viam-registry) and select the `viam:camera:rgb-d-overlay` model from the [`rgb-d-overlay` module](https://app.viam.com/module/viam/rgb-d-overlay).
+
+Alternatively, you can [build this module yourself](#build-the-rgb-d-overlay-module), and add it to your machine as a local module.
+
+## Configure your `rgb-d-overlay` camera component
+
+> [!NOTE]
+> Before configuring your camera component, you must [create a machine](https://docs.viam.com/manage/fleet/machines/#add-a-new-machine).
+
+Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
+Click on the **Components** subtab and click **Create component**.
+Select the `camera` type, then select the `rgb-d-overlay` model.
+Click **Add module**, then enter a name for your camera component and click **Create**.
+
+> [!NOTE]
+> For more information, see [Configure a Machine](https://docs.viam.com/manage/configuration/).
+
+### Configure your image stream camera
+
+On the camera component that supports outputting simultaneous depth and color image streams, such as the [Intel Realsense](https://app.viam.com/module/viam/realsense) or the [Luxonis OAK-D](https://app.viam.com/module/viam/oak-d), configure the `sensors` attribute to support both types of camera streams supported:
+
+Navigate to the **Config** tab of your machine's page in [the Viam app](https://app.viam.com/).
+Click on the **Components** subtab and select the configuration pane for your image stream camera, _not_ the `rgb-d-overlay` camera.
+Under **Attributes**, add the following `sensors` configuration to your image stream camera configuration:
+
+```json
+{
+    "sensors": ["color", "depth"]
+}
 ```
-git clone https://github.com/viam-labs/rgb-d-overlay.git
-cd rgb-d-overlay
-```
-### MacOS
-1. Run
-```
-mkdir build
-cd build
-cmake ..
-make
-```
-2. The outputted binary `rgb-d-overlay` will be in the `build` directory.
 
-### Linux ARM64
-1. Clone this repository
-```
-git clone https://github.com/viam-labs/rgb-d-overlay.git
-cd rgb-d-overlay
-```
-2. Make sure you have [Docker installed.](https://docs.docker.com/engine/install/)
-3. Run `make appimage-aarch64`
+Click **Save config** to save your changes.
 
-### Local Build
+## Attributes
 
-Follow steps for [preparing a module for execution](https://docs.viam.com/registry/create/#prepare-the-module-for-execution). Use sections linked in [Module Contents](#module-contents) as a reference.
+There are no attributes available for configuration with this component.
 
-## Module Configuration
-
-After [adding a machine](https://docs.viam.com/fleet/machines/#add-a-new-machine), navigate to **Config** -> **Components** in the Viam app and create a component using the `rgb-d-overlay` model. Ensure your JSON configuration under **Raw JSON** mode includes the new component and module.
-
-Example configuration snippet:
+## Example configuration
 
 ```json
 {
@@ -57,3 +64,55 @@ Example configuration snippet:
   ]
 }
 ```
+
+Update the `depends_on` array with the name of your image stream camera.
+For example, if your image stream camera is named `my-realsense-cam`, you would use the following configuration: `"depends_on": ["my-realsense-cam"]`
+
+## Next steps
+
+Once you have added the `rgb-d-overlay` module, you can use it to compare camera outputs from the Viam app.
+
+1. Navigate to the **Control** tab for your machine in the [Viam app](https://app.viam.com/), and select the `rgb-d-overlay` camera
+1. Enable the camera stream to see the live camera feed, including the overlay.
+
+## Build the `rgb-d-overlay` module
+
+You can also build this module yourself using the instructions below:
+
+### Build on MacOS
+
+1. Install the required dependencies by running the `setup.sh` script from this repository.
+1. [Install Rust](https://www.rust-lang.org/tools/install).
+1. Clone this repository:
+
+   ```bash
+   git clone https://github.com/viam-labs/rgb-d-overlay.git
+   cd rgb-d-overlay
+   ```
+
+1. Build the module:
+
+   ```bash
+   mkdir build
+   cd build
+   cmake ..
+   make
+   ```
+
+The outputted binary `rgb-d-overlay` will be written to the `build` directory.
+
+### Build on Linux
+
+1. [Install Docker](https://docs.docker.com/engine/install/).
+1. Clone this repository:
+
+   ```bash
+   git clone https://github.com/viam-labs/rgb-d-overlay.git
+   cd rgb-d-overlay
+   ```
+
+1. Run `make appimage-aarch64`
+
+### Add as a local module
+
+Once you have built the `rgb-d-overlay` module, you can [add it to your machine as a local module](https://docs.viam.com/registry/configure/#add-a-local-module).
