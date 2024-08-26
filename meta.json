@@ -1,12 +1,12 @@
 {
-  "module_id": "viam:rgb-d-overlay",
+  "module_id": "seanorg:rgb-d-overlay",
   "visibility": "public",
   "url": "https://github.com/hexbabe/rgb-d-overlay",
   "description": "C++ module for verifying the alignment of a camera module's color and depth outputs by overlaying them",
   "models": [
     {
       "api": "rdk:component:camera",
-      "model": "viam:camera:rgb-d-overlay"
+      "model": "seanorg:camera:rgb-d-overlay"
     }
   ],
   "entrypoint": "run.sh"

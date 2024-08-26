@@ -64,9 +64,11 @@ RUN apt-get -y --no-install-recommends install -t bullseye-backports \
 
 # Install viam-cpp-sdk
 RUN mkdir -p ${HOME}/opt/src
+ENV PINNED_COMMIT_HASH="802b70b234741d17345be77b4e52f39e4c40a252"
 RUN cd ${HOME}/opt/src && \
     git clone https://github.com/viamrobotics/viam-cpp-sdk && \
     cd viam-cpp-sdk && \
+    git checkout ${PINNED_COMMIT_HASH} && \
     mkdir build && \
     cd build && \
     cmake .. -G Ninja && \

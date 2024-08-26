@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
     Magick::InitializeMagick(nullptr);
 
     API camera_api = API::get<Camera>();
-    Model m("viam", "camera", "rgb-d-overlay");
+    Model m("seanorg", "camera", "rgb-d-overlay");
 
     std::shared_ptr<ModelRegistration> mr = std::make_shared<ModelRegistration>(
         camera_api,
