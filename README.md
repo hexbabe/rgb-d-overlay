@@ -4,6 +4,8 @@ This module implements the [Viam camera API](https://docs.viam.com/build/program
 With this model, you can process color and depth outputs from multiple camera modules, in order to ensure that the FOV, resolution, aspect ratio, and time synchronization of the cameras are aligned.
 This module uses ImageMagick to overlay two images semi-transparently to directly compare two camera outputs.
 
+![Intel Realsense get_images RGB-D Demo](https://github.com/user-attachments/assets/c326044b-3dcd-4397-b14c-256df8a50b41)
+
 ## Requirements
 
 Your machine must have at least one [camera component](https://docs.viam.com/components/camera/) which supports outputting simultaneous depth and color image streams, such as the [Intel Realsense](https://app.viam.com/module/viam/realsense) or the [Luxonis OAK-D](https://app.viam.com/module/viam/oak-d), in order to use the `rgb-d-overlay` module.
